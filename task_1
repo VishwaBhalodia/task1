@@ -1,0 +1,57 @@
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import GridSearchCV
+
+titanic_data = pd.read_csv("/content/Titanic-Dataset.csv")
+
+titanic_data.dropna(subset=["Embarked"], inplace=True) 
+titanic_data["Age"].fillna(titanic_data["Age"].median(), inplace=True) 
+titanic_data.drop(columns=["Cabin", "Ticket", "Name", "PassengerId"], inplace=True) 
+
+
+titanic_data["FamilySize"] = titanic_data["SibSp"] + titanic_data["Parch"] + 1
+
+
+categorical_cols = ["Sex", "Embarked"]
+onehot_encoder = OneHotEncoder()
+preprocessor = ColumnTransformer(
+    transformers=[("cat", onehot_encoder, categorical_cols)],
+    remainder="passthrough"
+)
+
+plt.figure(figsize=(10, 6))
+titanic_data.groupby("Sex")["Survived"].mean().plot(kind="bar", color=["skyblue", "salmon"])
+plt.title("Survival Rate by Gender")
+plt.xlabel("Gender")
+plt.ylabel("Survival Rate")
+plt.xticks(rotation=0)
+plt.show()
+
+
+X = titanic_data.drop(columns=["Survived"])
+y = titanic_data["Survived"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+
+model_pipeline = Pipeline([
+    ("preprocessor", preprocessor),
+    ("classifier", RandomForestClassifier(random_state=42))
+])
+
+
+model_pipeline.fit(X_train, y_train)
+
+y_pred = model_pipeline.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+print("Classification Report:")
+print(classification_report(y_test, y_pred))
